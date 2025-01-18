@@ -28,11 +28,11 @@ spec:
               value: "mongodb://task-board-mongo-srv:27017/"
             - name: EVENTSTORE_URI
               value: "esdb://task-board-event-store-srv:2113?tls=false"
-            # - name: JWT_KEY
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: jwt-secret
-            #       key: JWT_KEY
+            - name: JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_KEY
 ---
 apiVersion: v1
 kind: Service

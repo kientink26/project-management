@@ -1,4 +1,4 @@
-import { startAPI } from '#core/api';
+import { startAPI } from 'src/projects/api';
 import {
   SubscriptionToAllWithMongoCheckpoints,
   storeCheckpointInCollection,

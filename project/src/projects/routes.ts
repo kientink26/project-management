@@ -199,6 +199,30 @@ router.put(
   },
 );
 
+// Find Project by id
+
+router.get(
+  '/:projectId',
+  async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const projects = await getProjectsCollection();
+
+      const result = await projects.findOne({
+        _id: toObjectId(assertNotEmptyString(request.params.projectId)),
+      });
+
+      if (result == null) {
+        response.sendStatus(404);
+        return;
+      }
+
+      response.send(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 // Find Projects By Collaborating User or Owner
 
 type FindProjectsRequest = Request<
@@ -247,30 +271,6 @@ router.get(
           })
           .toArray();
       }
-
-      if (result == null) {
-        response.sendStatus(404);
-        return;
-      }
-
-      response.send(result);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
-
-// Find Project by id
-
-router.get(
-  '/projects/:projectId',
-  async (request: Request, response: Response, next: NextFunction) => {
-    try {
-      const projects = await getProjectsCollection();
-
-      const result = await projects.findOne({
-        _id: toObjectId(assertNotEmptyString(request.params.projectId)),
-      });
 
       if (result == null) {
         response.sendStatus(404);
