@@ -8,6 +8,8 @@ import { createUser, toUserStreamName, updateUserRole } from './user';
 import { Password } from 'src/utils/password';
 import { getUsersCollection } from './userProjection';
 import jwt from 'jsonwebtoken';
+import { authenticate, UserPayload } from '#core/authenticate';
+import { requireAuth } from '#core/require-auth';
 
 //////////////////////////////////////
 /// Routes
@@ -35,7 +37,7 @@ router.post(
 
       const streamName = toUserStreamName(userId);
 
-      const result = await create(getEventStore(), createUser)(streamName, {
+      await create(getEventStore(), createUser)(streamName, {
         userId,
         password: await Password.toHash(
           assertNotEmptyString(request.body.password),
@@ -43,6 +45,20 @@ router.post(
         email: assertNotEmptyString(request.body.email),
         role: assertNotEmptyString(request.body.role),
       });
+
+      // Generate JWT
+      const userJwt = jwt.sign(
+        {
+          id: userId,
+          role: request.body.role!,
+        } satisfies UserPayload,
+        process.env.JWT_KEY!,
+      );
+
+      // Store it on session object
+      request.session = {
+        jwt: userJwt,
+      };
 
       sendCreated(response, userId);
     } catch (error) {
@@ -84,15 +100,31 @@ router.post(
       // Generate JWT
       const userJwt = jwt.sign(
         {
-          id: user._id,
-        },
+          id: String(user._id),
+          role: user.role,
+        } satisfies UserPayload,
         process.env.JWT_KEY!,
       );
 
-      response.status(200).send({ token: userJwt });
+      // Store it on session object
+      request.session = {
+        jwt: userJwt,
+      };
+
+      response.status(200).send({ jwt: userJwt });
     } catch (error) {
       next(error);
     }
+  },
+);
+
+// Get current user
+
+router.get(
+  '/current-user',
+  authenticate,
+  async (request: Request, response: Response, next: NextFunction) => {
+    response.send({ currentUser: request.currentUser || null });
   },
 );
 
@@ -106,6 +138,8 @@ type UpdateUserRoleRequest = Request<
 
 router.put(
   '/:userId',
+  authenticate,
+  requireAuth,
   async (
     request: UpdateUserRoleRequest,
     response: Response,
