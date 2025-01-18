@@ -10,6 +10,13 @@ spec:
     - host: kanban.dev
       http:
         paths:
+          - path: /users/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-srv
+                port:
+                  number: 5000
           - path: /projects/?(.*)
             pathType: ImplementationSpecific
             backend:

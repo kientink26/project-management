@@ -64,7 +64,7 @@ export const projectToProjectReadModel = (
     case 'member-removed':
       return memberRemoved(event, streamRevision);
     case 'member-role-changed':
-      return membeRoleChanged(event, streamRevision);
+      return memberRoleChanged(event, streamRevision);
     default:
       return Promise.resolve();
   }
@@ -202,7 +202,7 @@ export const memberRemoved = async (
   );
 };
 
-export const membeRoleChanged = async (
+export const memberRoleChanged = async (
   event: MemberRoleChanged,
   streamRevision: number,
 ): Promise<void> => {
