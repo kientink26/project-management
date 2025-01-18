@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-board-mongo-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task-board-mongo
+  template:
+    metadata:
+      labels:
+        app: task-board-mongo
+    spec:
+      containers:
+        - name: task-board-mongo
+          image: mongo:6.0.12
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-board-mongo-srv
+spec:
+  selector:
+    app: task-board-mongo
+  ports:
+    - name: db
+      protocol: TCP
+      port: 27017
+      targetPort: 27017

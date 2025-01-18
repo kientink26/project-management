@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-board-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task-board
+  template:
+    metadata:
+      labels:
+        app: task-board
+    spec:
+      containers:
+        - name: task-board
+          image: kientink26/task-board
+          env:
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NATS_URL
+              value: "http://nats-srv:4222"
+            - name: NATS_CLUSTER_ID
+              value: kanban
+            - name: MONGO_URI
+              value: "mongodb://task-board-mongo-srv:27017/"
+            - name: EVENTSTORE_URI
+              value: "esdb://task-board-event-store-srv:2113?tls=false"
+            # - name: JWT_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: jwt-secret
+            #       key: JWT_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-board-srv
+spec:
+  selector:
+    app: task-board
+  ports:
+    - name: task-board
+      protocol: TCP
+      port: 5000
+      targetPort: 5000

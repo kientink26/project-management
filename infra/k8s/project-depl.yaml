@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project
+  template:
+    metadata:
+      labels:
+        app: project
+    spec:
+      containers:
+        - name: project
+          image: kientink26/project
+          env:
+            - name: NATS_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NATS_URL
+              value: "http://nats-srv:4222"
+            - name: NATS_CLUSTER_ID
+              value: kanban
+            - name: MONGO_URI
+              value: "mongodb://project-mongo-srv:27017/"
+            - name: EVENTSTORE_URI
+              value: "esdb://project-event-store-srv:2113?tls=false"
+            # - name: JWT_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: jwt-secret
+            #       key: JWT_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-srv
+spec:
+  selector:
+    app: project
+  ports:
+    - name: project
+      protocol: TCP
+      port: 5000
+      targetPort: 5000

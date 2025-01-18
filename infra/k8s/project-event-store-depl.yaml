@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-event-store-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-event-store
+  template:
+    metadata:
+      labels:
+        app: project-event-store
+    spec:
+      containers:
+        - name: project-event-store
+          image: eventstore/eventstore:24.10.0-bookworm-slim
+          env:
+            - name: EVENTSTORE_CLUSTER_SIZE
+              value: "1"
+            - name: EVENTSTORE_RUN_PROJECTIONS
+              value: "All"
+            - name: EVENTSTORE_START_STANDARD_PROJECTIONS
+              value: "true"
+            - name: EVENTSTORE_NODE_PORT
+              value: "2113"
+            - name: EVENTSTORE_INSECURE
+              value: "true"
+            - name: EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-event-store-srv
+spec:
+  selector:
+    app: project-event-store
+  ports:
+    - name: port1
+      protocol: TCP
+      port: 2113
+      targetPort: 2113
+    - name: port2
+      protocol: TCP
+      port: 1113
+      targetPort: 1113
