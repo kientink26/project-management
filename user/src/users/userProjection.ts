@@ -5,7 +5,7 @@ import {
   toObjectId,
 } from '../core/mongoDB';
 import { SubscriptionResolvedEvent } from '../core/subscriptions';
-import { isUserEvent, UserCreated, UserRoleChanged } from './user';
+import { isUserEvent, UserCreated, UserRoleChanged } from './events';
 
 //////////////////////////////////////
 /// User Read Model projection

@@ -1,19 +1,27 @@
 import { v4 as uuid } from 'uuid';
-import { create, update } from '#core/commandHandling';
-import { getEventStore } from '#core/streams';
 import { sendCreated } from '#core/http';
 import { NextFunction, Request, Response, Router } from 'express';
 import { assertNotEmptyString } from '#core/validation';
-import { createUser, toUserStreamName, updateUserRole } from './user';
-import { Password } from 'src/utils/password';
 import { getUsersCollection } from './userProjection';
 import jwt from 'jsonwebtoken';
 import { authenticate, UserPayload } from '#core/authenticate';
 import { requireAuth } from '#core/require-auth';
+import { CommandHandlers } from './command-handler';
+import { EventStoreDBEventStore } from '#core/event-store-db';
+import {
+  CreateUserCommand,
+  LoginUserCommand,
+  UpdateUserRoleCommand,
+} from './command';
 
 //////////////////////////////////////
 /// Routes
 //////////////////////////////////////
+const commandHandler = new CommandHandlers({
+  eventStore: new EventStoreDBEventStore({
+    connectionString: process.env.EVENTSTORE_URI!,
+  }),
+});
 
 export const router = Router();
 
@@ -35,16 +43,16 @@ router.post(
     try {
       const userId = uuid();
 
-      const streamName = toUserStreamName(userId);
-
-      await create(getEventStore(), createUser)(streamName, {
-        userId,
-        password: await Password.toHash(
-          assertNotEmptyString(request.body.password),
-        ),
-        email: assertNotEmptyString(request.body.email),
-        role: assertNotEmptyString(request.body.role),
-      });
+      await commandHandler.handleCommand(
+        new CreateUserCommand({
+          data: {
+            userId,
+            email: assertNotEmptyString(request.body.email),
+            password: assertNotEmptyString(request.body.password),
+            role: assertNotEmptyString(request.body.role),
+          },
+        }),
+      );
 
       // Generate JWT
       const userJwt = jwt.sign(
@@ -72,36 +80,33 @@ router.post(
 type LoginUserRequest = Request<
   unknown,
   unknown,
-  Partial<{ email: string; password: string }>
+  Partial<{ userId: string; password: string }>
 >;
 
 router.post(
   '/login',
   async (request: LoginUserRequest, response: Response, next: NextFunction) => {
     try {
+      await commandHandler.handleCommand(
+        new LoginUserCommand({
+          data: {
+            userId: assertNotEmptyString(request.body.userId),
+            password: assertNotEmptyString(request.body.password),
+          },
+        }),
+      );
+
       const users = await getUsersCollection();
 
       const user = await users.findOne({
-        email: assertNotEmptyString(request.body.email),
+        userId: assertNotEmptyString(request.body.userId),
       });
-
-      if (!user) {
-        return next(new Error('invalid credential'));
-      }
-      const passwordMatch = await Password.compare(
-        user.password,
-        assertNotEmptyString(request.body.password),
-      );
-
-      if (!passwordMatch) {
-        return next(new Error('invalid credential'));
-      }
 
       // Generate JWT
       const userJwt = jwt.sign(
         {
-          id: String(user._id),
-          role: user.role,
+          id: String(user!._id),
+          role: user!.role,
         } satisfies UserPayload,
         process.env.JWT_KEY!,
       );
@@ -146,14 +151,14 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      const userId = assertNotEmptyString(request.params.userId);
-      const streamName = toUserStreamName(userId);
-
-      await update(getEventStore(), updateUserRole)(streamName, {
-        userId,
-        role: assertNotEmptyString(request.body.role),
-      });
-
+      await commandHandler.handleCommand(
+        new UpdateUserRoleCommand({
+          data: {
+            userId: assertNotEmptyString(request.params.userId),
+            role: assertNotEmptyString(request.body.role),
+          },
+        }),
+      );
       response.sendStatus(200);
     } catch (error) {
       next(error);
