@@ -47,6 +47,9 @@ export class CommandHandlers {
     const streamName = toProjectStreamName(projectId);
 
     const { events, currentVersion } = await this.#eventStore.load(streamName);
+    if (events.length === 0) {
+      throw new Error('not found');
+    }
     const newEvents = renameProject(
       applyProjectEvents(initialProjectState, events),
       name,
@@ -67,6 +70,9 @@ export class CommandHandlers {
     const projectStreamName = toProjectStreamName(projectId);
     const { events, currentVersion } =
       await this.#eventStore.load(projectStreamName);
+    if (events.length === 0) {
+      throw new Error('not found');
+    }
 
     const newProjectEvents = addMemberToProject(
       applyProjectEvents(initialProjectState, events),
@@ -86,6 +92,9 @@ export class CommandHandlers {
     const projectStreamName = toProjectStreamName(projectId);
     const { events, currentVersion } =
       await this.#eventStore.load(projectStreamName);
+    if (events.length === 0) {
+      throw new Error('not found');
+    }
 
     const newProjectEvents = removeMemberFromProject(
       applyProjectEvents(initialProjectState, events),
@@ -102,6 +111,9 @@ export class CommandHandlers {
     const streamName = toMemberStreamName(memberId);
 
     const { events, currentVersion } = await this.#eventStore.load(streamName);
+    if (events.length === 0) {
+      throw new Error('not found');
+    }
     const newEvents = updateMemberRole(
       applyMemberEvents(initialMemberState, events),
       role,
