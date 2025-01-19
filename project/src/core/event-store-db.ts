@@ -6,8 +6,9 @@ import {
   NO_STREAM,
   StreamNotFoundError,
 } from '@eventstore/db-client';
+import { EventStore } from './event-store';
 
-export class EventStoreDBEventStore {
+export class EventStoreDBEventStore implements EventStore {
   #client;
 
   constructor({ connectionString }: { connectionString: string }) {

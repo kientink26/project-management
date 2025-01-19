@@ -1,3 +1,4 @@
+import { EventStore } from '#core/event-store';
 import { createMessageForwarder } from '#core/message-forwarder';
 import {
   AddMemberToProjectCommand,
@@ -24,9 +25,9 @@ import {
 } from './project-write-model';
 
 export class CommandHandlers {
-  #eventStore;
+  #eventStore: EventStore;
 
-  constructor({ eventStore }: { eventStore: any }) {
+  constructor({ eventStore }: { eventStore: EventStore }) {
     this.#eventStore = eventStore;
   }
 
