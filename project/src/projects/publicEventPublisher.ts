@@ -1,6 +1,6 @@
 import { SubscriptionResolvedEvent } from '../core/subscriptions';
-import { isProjectEvent } from './project';
-import { isMemberEvent } from './member';
+import { isProjectEvent } from './events';
+import { isMemberEvent } from './events';
 import { AllStreamRecordedEvent } from '@eventstore/db-client';
 import { natsWrapper } from '#core/nats-wrapper';
 

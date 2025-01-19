@@ -11,8 +11,8 @@ import {
   MemberRemovedFromProject,
   ProjectCreated,
   ProjectRenamed,
-} from './project';
-import { isMemberEvent, MemberCreated, MemberRoleChanged } from './member';
+} from './events';
+import { isMemberEvent, MemberCreated, MemberRoleChanged } from './events';
 
 //////////////////////////////////////
 /// Project Read Model projection

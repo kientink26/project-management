@@ -1,26 +1,30 @@
 import { v4 as uuid } from 'uuid';
-import {
-  addMemberToProject,
-  createProject,
-  removeMemberFromProject,
-  renameProject,
-  toProjectStreamName,
-} from './project';
-import { create, update } from '#core/commandHandling';
-import { getEventStore } from '#core/streams';
 import { sendCreated } from '#core/http';
 import { NextFunction, Request, Response, Router } from 'express';
 import { assertNotEmptyString } from '#core/validation';
-import { createMember, toMemberStreamName, updateMemberRole } from './member';
 import {
   getMembersCollection,
   getProjectsCollection,
 } from './projectProjection';
 import { toObjectId } from '#core/mongoDB';
+import { CommandHandlers } from './command-handler';
+import { EventStoreDBEventStore } from '#core/event-store-db';
+import {
+  AddMemberToProjectCommand,
+  CreateProjectCommand,
+  RemoveMemberFromProjectCommand,
+  UpdateMemberRoleCommand,
+  UpdateProjectNameCommand,
+} from './commands';
 
 //////////////////////////////////////
 /// Routes
 //////////////////////////////////////
+const commandHandler = new CommandHandlers({
+  eventStore: new EventStoreDBEventStore({
+    connectionString: process.env.EVENTSTORE_URI!,
+  }),
+});
 
 export const router = Router();
 
@@ -43,14 +47,16 @@ router.post(
       const projectId = uuid();
       const taskBoardId = uuid();
 
-      const streamName = toProjectStreamName(projectId);
-
-      const result = await create(getEventStore(), createProject)(streamName, {
-        projectId,
-        taskBoardId,
-        name: assertNotEmptyString(request.body.name),
-        ownerId: assertNotEmptyString(request.body.ownerId),
-      });
+      await commandHandler.handleCommand(
+        new CreateProjectCommand({
+          data: {
+            projectId,
+            name: assertNotEmptyString(request.body.name),
+            taskBoardId,
+            ownerId: assertNotEmptyString(request.body.ownerId),
+          },
+        }),
+      );
 
       sendCreated(response, projectId);
     } catch (error) {
@@ -75,27 +81,18 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      // First, create a new member
       const memberId = uuid();
-      const memberStreamName = toMemberStreamName(memberId);
-      await create(getEventStore(), createMember)(memberStreamName, {
-        memberId,
-        userId: assertNotEmptyString(request.body.userId),
-        role: assertNotEmptyString(request.body.role),
-      });
 
-      // Second, add member to project
-      const projectId = assertNotEmptyString(request.params.projectId);
-      const projectStreamName = toProjectStreamName(projectId);
-
-      const result = await update(getEventStore(), addMemberToProject)(
-        projectStreamName,
-        {
-          projectId,
-          memberId,
-        },
+      await commandHandler.handleCommand(
+        new AddMemberToProjectCommand({
+          data: {
+            projectId: assertNotEmptyString(request.params.projectId),
+            memberId,
+            userId: assertNotEmptyString(request.body.userId),
+            role: assertNotEmptyString(request.body.role),
+          },
+        }),
       );
-
       response.sendStatus(200);
     } catch (error) {
       next(error);
@@ -103,7 +100,7 @@ router.put(
   },
 );
 
-// Remove member from project
+// // Remove member from project
 
 type RemoveMemberFromTeamRequest = Request<
   Partial<{ projectId: string }>,
@@ -119,17 +116,14 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      const projectId = assertNotEmptyString(request.params.projectId);
-      const streamName = toProjectStreamName(projectId);
-
-      const result = await update(getEventStore(), removeMemberFromProject)(
-        streamName,
-        {
-          projectId,
-          memberId: assertNotEmptyString(request.body.memberId),
-        },
+      await commandHandler.handleCommand(
+        new RemoveMemberFromProjectCommand({
+          data: {
+            projectId: assertNotEmptyString(request.params.projectId),
+            memberId: assertNotEmptyString(request.body.memberId),
+          },
+        }),
       );
-
       response.sendStatus(200);
     } catch (error) {
       next(error);
@@ -137,7 +131,7 @@ router.put(
   },
 );
 
-// Rename project
+// // Rename project
 
 type RenameProjectRequest = Request<
   Partial<{ projectId: string }>,
@@ -153,14 +147,14 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      const projectId = assertNotEmptyString(request.params.projectId);
-      const streamName = toProjectStreamName(projectId);
-
-      const result = await update(getEventStore(), renameProject)(streamName, {
-        projectId,
-        name: assertNotEmptyString(request.body.name),
-      });
-
+      await commandHandler.handleCommand(
+        new UpdateProjectNameCommand({
+          data: {
+            projectId: assertNotEmptyString(request.params.projectId),
+            name: assertNotEmptyString(request.body.name),
+          },
+        }),
+      );
       response.sendStatus(200);
     } catch (error) {
       next(error);
@@ -184,14 +178,14 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      const memberId = assertNotEmptyString(request.params.memberId);
-      const streamName = toMemberStreamName(memberId);
-
-      await update(getEventStore(), updateMemberRole)(streamName, {
-        memberId,
-        role: assertNotEmptyString(request.body.role),
-      });
-
+      await commandHandler.handleCommand(
+        new UpdateMemberRoleCommand({
+          data: {
+            memberId: assertNotEmptyString(request.params.memberId),
+            role: assertNotEmptyString(request.body.role),
+          },
+        }),
+      );
       response.sendStatus(200);
     } catch (error) {
       next(error);
