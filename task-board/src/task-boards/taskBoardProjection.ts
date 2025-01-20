@@ -10,12 +10,12 @@ import {
   TaskAssigneeChanged,
   TaskCreated,
   TaskStatusChanged,
-} from './task';
+} from './events';
 import {
   isTaskBoardEvent,
   TaskAddedToTaskBoard,
   TaskRemovedFromTaskBoard,
-} from './taskBoard';
+} from './events';
 
 //////////////////////////////////////
 /// Task Board Read Model projection

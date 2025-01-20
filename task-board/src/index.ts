@@ -8,6 +8,7 @@ import { MemberRemovedListener } from './listeners/member-removed-listener';
 import { ProjectCreatedListener } from './listeners/project-created-listener';
 import { router } from './task-boards/routes';
 import { projectToTaskBoardReadModel } from './task-boards/taskBoardProjection';
+import { EventStoreDBEventStore } from '#core/event-store-db';
 
 //////////////////////////////////////
 /// Run
@@ -25,9 +26,6 @@ import { projectToTaskBoardReadModel } from './task-boards/taskBoardProjection';
   process.on('SIGINT', () => natsWrapper.client.close());
   process.on('SIGTERM', () => natsWrapper.client.close());
 
-  new ProjectCreatedListener(natsWrapper.client).listen();
-  new MemberRemovedListener(natsWrapper.client).listen();
-
   await delay(5000);
 
   await SubscriptionToAllWithMongoCheckpoints('sub_task_boards', [
@@ -35,6 +33,16 @@ import { projectToTaskBoardReadModel } from './task-boards/taskBoardProjection';
   ]);
 
   startAPI(router);
+
+  new ProjectCreatedListener({
+    eventBus: natsWrapper.client,
+    eventStore: EventStoreDBEventStore.getInstance(),
+  }).listen();
+
+  new MemberRemovedListener({
+    eventBus: natsWrapper.client,
+    eventStore: EventStoreDBEventStore.getInstance(),
+  }).listen();
 })().catch(console.log);
 
 async function delay(ms: number) {

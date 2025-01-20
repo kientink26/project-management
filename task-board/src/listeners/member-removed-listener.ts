@@ -4,20 +4,32 @@ import { Message } from 'node-nats-streaming';
 import { queueGroupName } from './queue-group-name';
 import { MemberRemovedFromProjectEvent } from '#core/member-removed-event';
 import { getTasksCollection } from 'src/task-boards/taskBoardProjection';
+import { EventStore } from '#core/event-store';
 import {
-  getTask,
+  applyTaskEvents,
+  initialTaskState,
   TaskStatus,
   toTaskStreamName,
   updateTaskAssignee,
   updateTaskStatus,
-} from 'src/task-boards/task';
-import { getEventStore } from '#core/streams';
-import { jsonEvent } from '@eventstore/db-client';
+} from 'src/task-boards/task-write-model';
 
 export class MemberRemovedListener extends Listener<MemberRemovedFromProjectEvent> {
+  eventStore: EventStore;
   subject: Subjects.MemberRemovedFromProject =
     Subjects.MemberRemovedFromProject;
   queueGroupName = queueGroupName;
+
+  constructor({
+    eventStore,
+    eventBus,
+  }: {
+    eventStore: EventStore;
+    eventBus: any;
+  }) {
+    super(eventBus);
+    this.eventStore = eventStore;
+  }
 
   async onMessage(data: MemberRemovedFromProjectEvent['data'], msg: Message) {
     const { memberId } = data;
@@ -32,33 +44,22 @@ export class MemberRemovedListener extends Listener<MemberRemovedFromProjectEven
     await Promise.all(
       taskAssignees.map(async ({ taskId }) => {
         const streamName = toTaskStreamName(taskId);
-        const readStream = getEventStore().readStream(streamName);
-        const task = await getTask(readStream);
+        const { events, currentVersion } =
+          await this.eventStore.load(streamName);
 
-        const eventsToAdd = [];
+        const taskState = applyTaskEvents(initialTaskState, events);
+        const statusEvents =
+          taskState.status === TaskStatus.IN_PROGRESS
+            ? updateTaskStatus(taskState, TaskStatus.TODO)
+            : [];
 
-        try {
-          if (task.status === TaskStatus.IN_PROGRESS) {
-            eventsToAdd.push(
-              await updateTaskStatus(getEventStore().readStream(streamName), {
-                taskId,
-                status: TaskStatus.TODO,
-              }),
-            );
-          }
-          eventsToAdd.push(
-            await updateTaskAssignee(getEventStore().readStream(streamName), {
-              taskId,
-              assigneeId: undefined,
-            }),
-          );
-        } catch (e) {
-          console.log(e);
-        }
+        const updatedTaskState = applyTaskEvents(taskState, statusEvents);
+        const assigneeEvents = updateTaskAssignee(updatedTaskState, undefined);
 
-        return getEventStore().appendToStream(
+        await this.eventStore.save(
           streamName,
-          eventsToAdd.map((ev) => jsonEvent(ev)),
+          [...statusEvents, ...assigneeEvents],
+          { expectedVersion: currentVersion },
         );
       }),
     );

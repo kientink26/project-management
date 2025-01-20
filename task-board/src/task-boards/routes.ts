@@ -1,48 +1,25 @@
 import { v4 as uuid } from 'uuid';
-import { create, update } from '#core/commandHandling';
-import { getEventStore } from '#core/streams';
 import { NextFunction, Request, Response, Router } from 'express';
 import { assertNotEmptyString } from '#core/validation';
-import {
-  createTask,
-  toTaskStreamName,
-  updateTaskAssignee,
-  updateTaskStatus,
-} from './task';
-import {
-  addTaskToTaskBoard,
-  createTaskBoard,
-  removeTaskFromTaskBoard,
-  toTaskBoardStreamName,
-} from './taskBoard';
 import { getTasksCollection } from './taskBoardProjection';
 import { sendCreated } from '#core/http';
+import { CommandHandlers } from './command-handler';
+import {
+  AddNewTaskToTaskBoardCommand,
+  RemoveTaskFromTaskBoardCommand,
+  UpdateTaskAssigneeCommand,
+  UpdateTaskStatusCommand,
+} from './commands';
+import { EventStoreDBEventStore } from '#core/event-store-db';
 
 //////////////////////////////////////
 /// Routes
 //////////////////////////////////////
+const commandHandler = new CommandHandlers({
+  eventStore: EventStoreDBEventStore.getInstance(),
+});
 
 export const router = Router();
-
-// Create task board
-
-router.post(
-  '/',
-  async (request: Request, response: Response, next: NextFunction) => {
-    try {
-      const taskBoardId = uuid();
-      const streamName = toTaskBoardStreamName(taskBoardId);
-
-      await create(getEventStore(), createTaskBoard)(streamName, {
-        taskBoardId,
-      });
-
-      sendCreated(response, taskBoardId);
-    } catch (error) {
-      next(error);
-    }
-  },
-);
 
 // Add task to taskboard
 
@@ -65,25 +42,20 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      // First, create a new task
       const taskId = uuid();
-      const taskStreamName = toTaskStreamName(taskId);
-      await create(getEventStore(), createTask)(taskStreamName, {
-        taskId,
-        title: assertNotEmptyString(request.body.title),
-        description: assertNotEmptyString(request.body.description),
-        status: assertNotEmptyString(request.body.status),
-        assigneeId: request.body.assigneeId,
-      });
 
-      // Second, add task to task board
-      const taskBoardId = assertNotEmptyString(request.params.taskBoardId);
-      const taskBoardStreamName = toTaskBoardStreamName(taskBoardId);
-
-      await update(getEventStore(), addTaskToTaskBoard)(taskBoardStreamName, {
-        taskBoardId,
-        taskId,
-      });
+      await commandHandler.handleCommand(
+        new AddNewTaskToTaskBoardCommand({
+          data: {
+            taskId,
+            taskBoardId: assertNotEmptyString(request.params.taskBoardId),
+            title: assertNotEmptyString(request.body.title),
+            description: assertNotEmptyString(request.body.description),
+            status: assertNotEmptyString(request.body.status),
+            assigneeId: request.body.assigneeId,
+          },
+        }),
+      );
 
       response.sendStatus(200);
     } catch (error) {
@@ -108,13 +80,14 @@ router.put(
     next: NextFunction,
   ) => {
     try {
-      const taskBoardId = assertNotEmptyString(request.params.taskBoardId);
-      const streamName = toTaskBoardStreamName(taskBoardId);
-
-      await update(getEventStore(), removeTaskFromTaskBoard)(streamName, {
-        taskBoardId,
-        taskId: assertNotEmptyString(request.body.taskId),
-      });
+      await commandHandler.handleCommand(
+        new RemoveTaskFromTaskBoardCommand({
+          data: {
+            taskBoardId: assertNotEmptyString(request.params.taskBoardId),
+            taskId: assertNotEmptyString(request.body.taskId),
+          },
+        }),
+      );
 
       response.sendStatus(200);
     } catch (error) {
@@ -140,18 +113,25 @@ router.put(
   ) => {
     try {
       const taskId = assertNotEmptyString(request.params.taskId);
-      const streamName = toTaskStreamName(taskId);
 
       if (request.body.status) {
-        await update(getEventStore(), updateTaskStatus)(streamName, {
-          taskId,
-          status: assertNotEmptyString(request.body.status),
-        });
+        await commandHandler.handleCommand(
+          new UpdateTaskStatusCommand({
+            data: {
+              taskId,
+              status: assertNotEmptyString(request.body.status),
+            },
+          }),
+        );
       } else {
-        await update(getEventStore(), updateTaskAssignee)(streamName, {
-          taskId,
-          assigneeId: request.body.assigneeId,
-        });
+        await commandHandler.handleCommand(
+          new UpdateTaskAssigneeCommand({
+            data: {
+              taskId,
+              assigneeId: request.body.assigneeId,
+            },
+          }),
+        );
       }
 
       response.sendStatus(200);
