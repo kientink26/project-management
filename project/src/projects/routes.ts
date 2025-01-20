@@ -21,9 +21,7 @@ import {
 /// Routes
 //////////////////////////////////////
 const commandHandler = new CommandHandlers({
-  eventStore: new EventStoreDBEventStore({
-    connectionString: process.env.EVENTSTORE_URI!,
-  }),
+  eventStore: EventStoreDBEventStore.getInstance(),
 });
 
 export const router = Router();

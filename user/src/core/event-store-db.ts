@@ -9,10 +9,20 @@ import {
 import { EventStore } from './event-store';
 
 export class EventStoreDBEventStore implements EventStore {
-  #client;
+  #client: EventStoreDBClient;
+  private static instance: EventStoreDBEventStore;
 
   constructor({ connectionString }: { connectionString: string }) {
     this.#client = EventStoreDBClient.connectionString(connectionString);
+  }
+
+  public static getInstance(): EventStoreDBEventStore {
+    if (!EventStoreDBEventStore.instance) {
+      EventStoreDBEventStore.instance = new EventStoreDBEventStore({
+        connectionString: process.env.EVENTSTORE_URI!,
+      });
+    }
+    return EventStoreDBEventStore.instance;
   }
 
   async save(

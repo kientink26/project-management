@@ -20,8 +20,3 @@ export const UpdateUserRoleCommand = createMessageType('UpdateUserRole')<{
 export type CreateUserCommand = InstanceType<typeof CreateUserCommand>;
 export type LoginUserCommand = InstanceType<typeof LoginUserCommand>;
 export type UpdateUserRoleCommand = InstanceType<typeof UpdateUserRoleCommand>;
-
-export type UserCommand =
-  | CreateUserCommand
-  | LoginUserCommand
-  | UpdateUserRoleCommand;

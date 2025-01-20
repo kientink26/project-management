@@ -46,11 +46,3 @@ export type RemoveMemberFromProjectCommand = InstanceType<
 export type UpdateMemberRoleCommand = InstanceType<
   typeof UpdateMemberRoleCommand
 >;
-
-export type ProjectCommand =
-  | CreateProjectCommand
-  | UpdateProjectNameCommand
-  | AddMemberToProjectCommand
-  | RemoveMemberFromProjectCommand;
-
-export type MemberCommand = UpdateMemberRoleCommand;
