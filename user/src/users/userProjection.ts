@@ -31,9 +31,9 @@ export const projectToUserReadModel = (
   const streamRevision = Number(event.revision);
 
   switch (event.type) {
-    case 'user-created':
+    case UserCreated.type:
       return userCreated(event, streamRevision);
-    case 'user-role-changed':
+    case UserRoleChanged.type:
       return userRoleChanged(event, streamRevision);
     default:
       return Promise.resolve();

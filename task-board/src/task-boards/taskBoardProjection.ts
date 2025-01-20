@@ -46,15 +46,15 @@ export const projectToTaskBoardReadModel = (
   const streamRevision = Number(event.revision);
 
   switch (event.type) {
-    case 'task-created':
+    case TaskCreated.type:
       return taskCreated(event, streamRevision);
-    case 'task-added':
+    case TaskAddedToTaskBoard.type:
       return taskAdded(event, streamRevision);
-    case 'task-removed':
+    case TaskRemovedFromTaskBoard.type:
       return taskRemoved(event, streamRevision);
-    case 'task-status-changed':
+    case TaskStatusChanged.type:
       return taskStatusChanged(event, streamRevision);
-    case 'task-assignee-changed':
+    case TaskAssigneeChanged.type:
       return taskAssigneeChanged(event, streamRevision);
     default:
       return Promise.resolve();

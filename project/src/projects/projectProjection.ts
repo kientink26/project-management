@@ -53,17 +53,17 @@ export const projectToProjectReadModel = (
   const streamRevision = Number(event.revision);
 
   switch (event.type) {
-    case 'project-created':
+    case ProjectCreated.type:
       return projectCreated(event, streamRevision);
-    case 'project-renamed':
+    case ProjectRenamed.type:
       return projectRenamed(event, streamRevision);
-    case 'member-created':
+    case MemberCreated.type:
       return memberCreated(event, streamRevision);
-    case 'member-added':
+    case MemberAddedToProject.type:
       return memberAdded(event, streamRevision);
-    case 'member-removed':
+    case MemberRemovedFromProject.type:
       return memberRemoved(event, streamRevision);
-    case 'member-role-changed':
+    case MemberRoleChanged.type:
       return memberRoleChanged(event, streamRevision);
     default:
       return Promise.resolve();
