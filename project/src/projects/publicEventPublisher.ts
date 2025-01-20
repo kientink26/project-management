@@ -1,5 +1,9 @@
 import { SubscriptionResolvedEvent } from '../core/subscriptions';
-import { isProjectEvent } from './events';
+import {
+  isProjectEvent,
+  MemberRemovedFromProject,
+  ProjectCreated,
+} from './events';
 import { isMemberEvent } from './events';
 import { AllStreamRecordedEvent } from '@eventstore/db-client';
 import { natsWrapper } from '#core/nats-wrapper';
@@ -21,8 +25,8 @@ export const publicEventPublisher = (
   const streamRevision = Number(event.revision);
 
   switch (event.type) {
-    case 'project-created':
-    case 'member-removed':
+    case ProjectCreated.type:
+    case MemberRemovedFromProject.type:
       return publishEvent(event);
     default:
       return Promise.resolve();
